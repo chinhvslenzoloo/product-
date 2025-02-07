@@ -14,32 +14,60 @@ datasource db {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  name      String?
-  email     String   @unique
+  id        Int    @id @default(autoincrement())
+  name      String
+  email     String @unique
   password  String
-  phone     String?  @unique 
+  phone     String? @unique
+  carts     Cart[]
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Category {
   id        Int      @id @default(autoincrement())
-  name      String   @unique               
-  createdAt DateTime @default(now())      
-  updatedAt DateTime @updatedAt    
-  product Product[]       
+  name      String   @unique
+  products  Product[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Product {
   id          Int      @id @default(autoincrement())
-  name        String  @db.VarChar(255)
-  description String  @db.VarChar(255)
+  name        String   @db.VarChar(255)
+  description String   @db.VarChar(255)
   price       Float
   color       String   @default("#FFFFFF")
-  imageURL    String? @db.VarChar(255)
   stock       Int      @default(0)
   categoryId  Int
   category    Category @relation(fields: [categoryId], references: [id])
+  images      Image[]
+  cartItems   CartItem[] // Relation to CartItem
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model Image {
+  id        Int    @id @default(autoincrement())
+  imageURL  String @db.VarChar(255)
+  productId Int
+  product   Product @relation(fields: [productId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Cart {
+  id      Int         @id @default(autoincrement())
+  userId  Int
+  user    User        @relation(fields: [userId], references: [id])
+  cartItems CartItem[]
+}
+
+model CartItem {
+  id        Int     @id @default(autoincrement())
+  productId Int
+  product   Product @relation(fields: [productId], references: [id])
+  cartId    Int
+  cart      Cart    @relation(fields: [cartId], references: [id])
+  quantity  Int
+  @@index([cartId, productId])  
 }

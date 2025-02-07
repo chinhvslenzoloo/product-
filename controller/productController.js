@@ -1,6 +1,5 @@
 const {PrismaClient} = require("@prisma/client");
 const prisma = new PrismaClient();
-const upload = require("../middleware/multer");
 
 // Get all products
 const getProducts = async (req, res) => {
@@ -31,28 +30,50 @@ const getProductById = async (req, res) => {
   }
 };
 
-// Create a new product
 const createProduct = async (req, res) => {
   const {name, description, price, color, stock, categoryId} = req.body;
-  const imageURL = req.file ? "/file/" + req.file.filename : null;
-  console.log(categoryId);
+
+  // Зургийн файлуудыг хүлээн авах
+  const imageURLs = req.files
+    ? req.files.map((file) => "/file/" + file.filename)
+    : [];
 
   try {
+    // Category-г шалгах
+    const category = await prisma.category.findUnique({
+      where: {id: Number(categoryId)},
+    });
+
+    if (!category) {
+      return res.status(404).json({error: "Category олдсонгүй!"});
+    }
+
+    // Бүтээгдэхүүн үүсгэх
     const product = await prisma.product.create({
       data: {
         name,
         description,
         price: parseFloat(price),
         color: color || "#FFFFFF",
-        imageURL,
         stock: parseInt(stock) || 0,
         category: {connect: {id: Number(categoryId)}},
       },
     });
+
+    // Зургуудыг "Image" хүснэгтэд нэмэх
+    if (imageURLs.length > 0) {
+      await prisma.image.createMany({
+        data: imageURLs.map((url) => ({
+          imageURL: url,
+          productId: product.id, // Бүтээгдэхүүний ID-г холбоно
+        })),
+      });
+    }
+
     res.status(201).json(product);
   } catch (error) {
     console.log(error);
-    res.status(500).json({error: "Бүтээгдэхүүн нэмэхэд алдаа гарлаа!", error});
+    res.status(500).json({error: "Бүтээгдэхүүн нэмэхэд алдаа гарлаа!"});
   }
 };
 
@@ -61,6 +82,7 @@ const updateProduct = async (req, res) => {
   const {id} = req.params;
   const {name, description, price, color, imageURL, stock, categoryId} =
     req.body;
+
   try {
     const updatedProduct = await prisma.product.update({
       where: {id: Number(id)},

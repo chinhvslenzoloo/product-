@@ -4,6 +4,7 @@ const jwt = require("jsonwebtoken");
 
 const prisma = new PrismaClient();
 
+// ✅ 1. Хэрэглэгч бүртгэх
 exports.createUser = async (req, res) => {
   const {email, password, name, phone} = req.body;
 
@@ -20,42 +21,40 @@ exports.createUser = async (req, res) => {
     });
 
     res.status(201).json({
-      message: "User created successfully",
+      message: "Хэрэглэгч амжилттай бүртгэгдлээ!",
       user,
     });
   } catch (err) {
-    console.error("Error creating user:", err.message);
-    res.status(500).json({error: "Error creating user!"});
+    console.error("Хэрэглэгч бүртгэхэд алдаа гарлаа:", err.message);
+    res.status(500).json({error: "Хэрэглэгч үүсгэхэд алдаа гарлаа!"});
   }
 };
 
+// ✅ 2. Нэвтрэх (Login)
 exports.loginUser = async (req, res) => {
   const {email, password} = req.body;
 
   try {
     // Хэрэглэгчийн мэдээллийг шалгах
     const user = await prisma.user.findUnique({
-      where: {
-        email,
-      },
+      where: {email},
     });
 
     if (!user) {
-      console.log("Хэрэглэгчийн мэдээлэл олдсонгүй: ", email); // Алдааг бүртгэх
+      console.log("Хэрэглэгч олдсонгүй:", email);
       return res.status(401).json({error: "Хэрэглэгч олдсонгүй!"});
     }
 
     // Нууц үгийг шалгах
     const isPasswordValid = await bcrypt.compare(password, user.password);
-
     if (!isPasswordValid) {
-      console.log("Нууц үг буруу: ", email); // Алдааг бүртгэх
+      console.log("Нууц үг буруу:", email);
       return res.status(401).json({error: "Нууц үг буруу!"});
     }
 
-    // JWT token үүсгэх
+    // ✅ JWT токен үүсгэх
     const token = jwt.sign(
-      {userId: user.id, email: user.email},
+      {userId: user.id, email: user.email}, // `userId` гэж хадгалах
       process.env.JWT_SECRET,
       {expiresIn: "1h"}
     );
@@ -66,6 +65,6 @@ exports.loginUser = async (req, res) => {
     });
   } catch (err) {
     console.error("Логинд алдаа гарлаа:", err.message);
-    res.status(500).json({error: "Логин хийхэд алдаа гарлаа!"});
+    res.status(500).json({error: "Нэвтрэхэд алдаа гарлаа!"});
   }
 };
